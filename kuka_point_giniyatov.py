@@ -701,7 +701,7 @@ def main():
         move_group.go_home()
         
         # Добавление виртуальных стен в сцену робота
-        # move_group.add_scene_constraints()
+        move_group.add_scene_constraints()
 
         # Получение актуальной позиции tool0 - точка куда установлен захват - НЕ НИЖНЯЯ ЧАСТЬ ЗАХВАТА
         cur_pose=move_group.move_group.get_current_pose().pose
