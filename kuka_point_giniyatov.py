@@ -63,29 +63,24 @@ def get_coords(image_path):
 
     print("Image loaded:", img.shape)
 
-    # --- 1. Constants and Knowns ---
-    # Transformation matrix from camera to robot coordinate system (rotation part)
+    # --- 1. Константы ---
+
     R_camera_to_robot = np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]], dtype=np.float32)
 
-    # Camera intrinsic matrix
     camera_matrix = np.array([
         [2642.871297, 0.0, 667.190278],
         [0.0, 2638.092286, 598.572322],
         [0.0, 0.0, 1.0]
     ], dtype=np.float32)
 
-    # Distortion coefficients
     distortion = np.array([-0.026095, 0.190206, 0.002471, -0.002471, 0.0], dtype=np.float32)
 
-    # Position of Calibration Marker 1 in the robot base coordinate system
     P_m1_robot = np.array([-0.162, -0.274, 0.0025], dtype=np.float32).reshape(3, 1)
 
     marker_size_calib = 0.1   # 100 мм
     marker_size_target = 0.04  # 30 мм
 
-    # --- 2. Placeholder Marker Poses (from cv2.aruco.estimatePoseSingleMarkers) ---
-    # In a real application, these valuess would be obtained from your camera image.
-    # These are plausible but fictional values for demonstration.
+    # --- 2. Определение мааркеров (cv2.aruco.estimatePoseSingleMarkers) ---
     aruco = cv2.aruco
     dictionary = aruco.getPredefinedDictionary(aruco.DICT_5X5_250)
 
@@ -96,7 +91,7 @@ def get_coords(image_path):
 
     # Индексы
     idx_calib = ids_flat.index(3)
-    idx_target = ids_flat.index(8)
+    idx_target = ids_flat.index(8) # поставить ID искомого маркера 
 
     corners_calib = corners[idx_calib]
     corners_target = corners[idx_target]
@@ -123,36 +118,29 @@ def get_coords(image_path):
 
 
 
-    # Pose of Calibration Marker 1 in the camera's coordinate system
+    # Калибровочный маркер в координатной системе камеры
     tvec_m1_cam = tvec_calib
     rvec_m1_cam = rvec_calib
 
-    # Pose of Target Marker 2 in the camera's coordinate system
+    # Искомый маркер в координатной системе камеры
     tvec_m2_cam = tvec_target
     rvec_m2_cam = tvec_target
 
-    # --- 3. Calculations ---
+    # --- 3. Подсчеты ---
 
-    # Convert rotation vectors to rotation matrices
     R_m1_cam, _ = cv2.Rodrigues(rvec_m1_cam)
     R_m2_cam, _ = cv2.Rodrigues(rvec_m2_cam)
 
-    # Find the camera's translation relative to the robot base.
-    # We know P_m1_robot = R_camera_to_robot * tvec_m1_cam + t_camera_to_robot
-    # So, t_camera_to_robot = P_m1_robot - R_camera_to_robot * tvec_m1_cam
+    # Находим матрицу поворта камеры к системе робота 
     t_camera_to_robot = P_m1_robot - R_camera_to_robot @ tvec_m1_cam
 
-    # Now, transform the Target Marker 2's position to the robot coordinate system
+    # Положение искомого маркера в координстной системе робота
     P_m2_robot = R_camera_to_robot @ tvec_m2_cam + t_camera_to_robot
 
-    # Transform the Target Marker 2's rotation to the robot coordinate system
-    R_m2_robot = R_camera_to_robot @ R_m2_cam
 
-    # Convert the final rotation matrix back to a rotation vector
+    R_m2_robot = R_camera_to_robot @ R_m2_cam
     rvec_m2_robot, _ = cv2.Rodrigues(R_m2_robot)
 
-    # Calculate the Yaw angle around the Z-axis of the robot base
-    # A robust way is to convert to Euler angles.
     sy = np.sqrt(R_m2_robot[0,0] * R_m2_robot[0,0] +  R_m2_robot[1,0] * R_m2_robot[1,0])
     singular = sy < 1e-6
     if not singular:
@@ -162,8 +150,7 @@ def get_coords(image_path):
 
     yaw_m2_robot_degrees = np.rad2deg(z)
 
-    # --- 4. Output the Results ---
-    # The final result would be printed here. For example:
+    # --- 4. Вывод результатов ---
     print("Target Marker 2 Position (X, Y, Z) in Robot Base (meters):")
     print(P_m2_robot.flatten())
     final = P_m2_robot.flatten()
